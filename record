@@ -1,0 +1,66 @@
+https://github.com/go-kratos/examples/blob/main/i18n/README.md
+https://github.com/grpc/grpc-go/blob/master/Documentation/grpc-auth-support.md
+
+https://medium.com/@kumarprabhashanand/secure-grpc-apis-with-oauth2-dfaa6e502924
+https://ballerina.io/learn/by-example/grpc-client-oauth2-jwt-bearer-grant-type/
+
+https://github.com/douglasmakey/oauth2-example
+
+https://medium.com/scum-gazeta/golang-oauth2-openid-d69d09cb84db
+
+
+https://github.com/golang/oauth2/blob/master/jwt/jwt.go
+https://www.bytesizego.com/blog/securing-grpc-golang
+
+https://github.com/coder/websocket/blob/master/ws_js.go
+
+
+https://koderover.com/blog/zadig-with-dex-account-system/
+
+
+
+kratos proto add api/helloworld/v1/demo.proto
+kratos proto client api/helloworld/v1/demo.proto
+kratos proto server api/helloworld/v1/demo.proto -t internal/service
+
+https://koderover.com/blog/zadig-with-dex-account-system/
+
+https://github.com/gorilla/websocket/blob/main/examples/chat/client.go#L124
+
+
+https://github.com/coder/websocket
+
+
+https://github.com/nats-io/nats.go
+
+
+https://github.com/dexidp/dex/blob/master/examples/grpc-client/config.yaml
+
+https://medium.com/@indranandjha/implementing-single-sign-on-sso-in-golang-a-comprehensive-tutorial-dd3528883a4d
+
+
+https://github.com/ory/kratos
+
+
+授权码模式： 安全性最高，适合外部第三方应用。
+隐式模式： 简单快速，适合前端单页应用，但安全性较低。
+密码模式： 快捷适用于受信任客户端，但对用户安全性要求高。
+客户端凭证模式： 服务间通信的理想选择，无需用户参与。
+
+https://github.com/ory/kratos?tab=readme-ov-file#getting-started
+
+
+https://github.com/dexidp/dex/blob/master/examples/config-ad-kubelogin.yaml
+
+https://dexidp.io/docs/connectors/oidc/
+
+
+https://github.com/koderover/zadig
+
+https://dexidp.io/docs/guides/using-dex/
+
+
+从 Dex 拿到 Token 后，浏览器可以通过以下几种方式使用它，具体取决于应用的架构和需求。Token 通常包括 Access Token 和 ID Token，它们的用途如下：
+
+Access Token: 用于授权访问后端 API。
+ID Token: 用于验证用户身份，通常是一个 JWT (JSON Web Token)。
