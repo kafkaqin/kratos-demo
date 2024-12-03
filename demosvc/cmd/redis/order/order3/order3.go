@@ -16,6 +16,17 @@ type OrderAction struct {
 	Details   string // 操作的详细信息（例如支付金额、退款金额等）
 }
 
+var luaScript = `
+local current_amount = redis.call('HGET', KEYS[1], 'amount')
+if current_amount then
+    local new_amount = tonumber(current_amount) + tonumber(ARGV[1])
+    redis.call('HSET', KEYS[1], 'amount', new_amount)
+    return new_amount
+else
+    return nil
+end
+`
+
 func main() {
 	// 初始化 Redis 客户端
 	rdb := redis.NewClient(&redis.Options{
@@ -47,6 +58,8 @@ func main() {
 	for _, action := range actions {
 		fmt.Println(action)
 	}
+
+	rdb.Eval(ctx, luaScript, []string{"order:1029977"}, []string{"50"})
 }
 
 // 记录订单的操作日志
