@@ -58,10 +58,11 @@ https://dexidp.io/docs/connectors/oidc/
 https://github.com/koderover/zadig
 
 https://dexidp.io/docs/guides/using-dex/
-
+https://github.com/ory/kratos?tab=readme-ov-file#getting-started
+https://github.com/koderover/zadig/blob/main/System-Architecture-Overview-zh-CN.md
 
 从 Dex 拿到 Token 后，浏览器可以通过以下几种方式使用它，具体取决于应用的架构和需求。Token 通常包括 Access Token 和 ID Token，它们的用途如下：
-
+https://github.com/go-kit/kit/blob/master/auth/casbin/middleware_test.go
 Access Token: 用于授权访问后端 API。
 ID Token: 用于验证用户身份，通常是一个 JWT (JSON Web Token)。
 https://plantuml.com/zh/mindmap-diagram
