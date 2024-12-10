@@ -1,0 +1,37 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+'autonumber
+actor Foo1 #green
+participant Participant as Foo #green
+actor       Actor as  Foo1
+boundary Boundary as Foo2
+control Control as Foo3
+entity Entity as Foo4
+database Database as Foo5
+collections Collections as Foo6
+queue Queue as Foo7
+
+skinparam responseMessageBelowAllow true
+Foo -->x Foo: self
+Foo -->x Foo1: to actor
+Foo -->> Foo2: to boundary
+Foo --/ Foo3: to control
+Foo --> Foo4: to entity
+Foo -->o Foo5: to database
+Foo o<--[#red] Foo6: to collections
+Foo <-\\ Foo7: to Queue
+
+'participant Foo order 100
+'participant Foo1 order 10
+'participant Foo2 order 100
+'participant Foo3 order 100
+'agent a
+
+'newpage
+
+
+Blob --> Alice
+Alice --> Blob
+
+
+@enduml
