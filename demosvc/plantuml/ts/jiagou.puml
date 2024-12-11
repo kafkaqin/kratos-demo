@@ -1,0 +1,66 @@
+@startuml
+!define RECTANGLE class
+
+actor User
+
+rectangle LoadBalancer {
+    [Load Balancer]
+}
+
+rectangle APIGateway {
+    [API Gateway]
+}
+
+rectangle Auth {
+    [Authentication]
+    [Authorization]
+}
+
+rectangle UserModule {
+    [User Service]
+    [Registration]
+    [Login]
+}
+
+rectangle BusinessServices {
+    [Business Service 1]
+    [Business Service 2]
+    [Business Service N]
+}
+
+rectangle AuditModule {
+    [Audit Service]
+}
+
+rectangle LiveStreaming {
+    [Live Streaming Service]
+}
+
+rectangle Database {
+    [PostgreSQL]
+    [MongoDB]
+    [Redis]
+}
+
+cloud Kubernetes {
+    [Kubernetes Cluster]
+    [Docker Containers]
+}
+
+User --> LoadBalancer
+LoadBalancer --> APIGateway
+APIGateway --> Auth
+APIGateway --> BusinessServices
+APIGateway --> LiveStreaming
+APIGateway --> UserModule
+UserModule --> [Registration]
+UserModule --> [Login]
+UserModule --> Auth
+BusinessServices --> Database
+LiveStreaming --> Database
+Database --> [PostgreSQL]
+Database --> [MongoDB]
+Database --> [Redis]
+AuditModule --> Database
+
+@enduml
