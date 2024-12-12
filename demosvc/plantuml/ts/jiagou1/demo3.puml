@@ -1,0 +1,112 @@
+@startuml
+'https://plantuml.com/component-diagram
+
+<style>
+.stereo{
+    BackgroundColor palegreen
+}
+</style>
+allowmixing
+
+skinparam nodesep 10
+abstract abstract1 << stereo >>
+abstract class  "abstract class" << stereo >>
+annotation annotation1 << stereo >>
+
+circle circle1 << stereo >>
+
+() circle_short_form
+
+diamond diamond1
+
+<> diamond_short_form
+entity e1
+enum enum1
+exception exception1
+
+interface i1
+metaclass metaclass1
+protocol protocol1
+stereotype stereotype1
+
+struct struct1
+
+object object1
+
+map map1{
+key => value
+}
+
+json JSON {
+ "1": "122"
+}
+
+action action1
+actor actor1
+
+actor/ actor2
+
+agent agent1
+
+
+artifact artiface1
+
+boundary bou1
+card card1
+
+circle circle2
+
+cloud cloud1
+
+collections c
+
+component c1
+
+
+control control1
+
+
+database database1
+
+entity entity1
+file file1
+
+folder folder1
+frame frame1
+
+hexagon hexagon1
+
+interface interface1
+
+label label1
+
+node node1{
+    file file12
+}
+
+package package1{
+  node node4
+}
+
+
+person person1
+
+process process1
+
+
+queue queue1
+
+rectangle rectangle1
+
+stack stack1
+
+storage storage1
+
+usecase usecase1
+usecase/ "usercase/"
+
+state state1
+
+
+frame frame11 << stereo >>
+@enduml

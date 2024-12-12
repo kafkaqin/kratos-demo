@@ -1,0 +1,33 @@
+@startuml
+[c]
+
+node node1{
+    port p1
+    port p2
+    port p3
+    file f1
+}
+
+c -->p1
+c -->p3
+c -->p2
+p1-->f1
+p2-->f1
+
+
+
+[d]
+
+node node2{
+    portin pi1
+    portin pi2
+    portin pi3
+    file f2
+}
+
+d-->pi1
+d-->pi2
+d-->pi3
+pi1-->f2
+pi2-->f2
+@enduml
