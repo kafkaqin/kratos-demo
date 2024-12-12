@@ -1,0 +1,80 @@
+@startuml
+
+actor User as U
+entity "PC端 APP端" as App
+entity "API网关(认证,授权)" as APIGateway
+entity "用户服务" as UserService
+entity "店主服务" as StoreOwnerService
+entity "彩票服务" as LotteryService
+entity "订单服务(方案服务)" as OrderService
+entity "支付服务" as PaymentService
+entity "IM服务" as IMService
+entity "直播服务" as LiveService
+entity "论坛服务" as ForumService
+entity "报表服务" as ReportService
+entity "钱包服务" as WalletService
+entity "二维码生成服务" as QRCodeService
+entity "排名服务" as RankingService
+entity "后台管理系统服务" as AdminService
+entity "数据源处理服务" as DataProcessingService
+entity "红点服务" as RedDotService
+entity "nats" as NATS
+entity "emqx" as EMQX
+entity "postgres" as Postgres
+entity "mongodb" as MongoDB
+entity "kubernetes cluster" as K8S
+entity "Cloud" as Cloud
+
+U -> App: 打开APP并发送请求
+App -> APIGateway: 发送请求 (包含认证信息)
+APIGateway -> UserService: 验证用户身份
+UserService -> APIGateway: 返回认证结果
+APIGateway -> StoreOwnerService: 店主服务请求
+StoreOwnerService -> APIGateway: 返回店主服务结果
+APIGateway -> LotteryService: 请求彩票相关信息
+LotteryService -> APIGateway: 返回彩票信息
+APIGateway -> OrderService: 请求订单服务（方案相关）
+OrderService -> APIGateway: 返回订单信息
+APIGateway -> PaymentService: 调用支付服务
+PaymentService -> Postgres: 更新支付信息
+Postgres -> PaymentService: 确认支付成功
+PaymentService -> APIGateway: 返回支付结果
+APIGateway -> IMService: 发送IM消息
+IMService -> EMQX: 发布消息到MQ
+EMQX -> IMService: 确认消息发送
+APIGateway -> LiveService: 获取直播信息
+LiveService -> Cloud: 获取直播流信息
+Cloud -> LiveService: 返回直播流信息
+LiveService -> APIGateway: 返回直播信息
+APIGateway -> ForumService: 请求论坛相关信息
+ForumService -> MongoDB: 查询论坛帖子
+MongoDB -> ForumService: 返回论坛帖子
+ForumService -> APIGateway: 返回论坛信息
+APIGateway -> ReportService: 请求报表服务
+ReportService -> NATS: 推送报表数据
+NATS -> ReportService: 确认推送完成
+ReportService -> APIGateway: 返回报表数据
+APIGateway -> WalletService: 请求钱包余额
+WalletService -> Postgres: 查询用户钱包余额
+Postgres -> WalletService: 返回余额
+WalletService -> APIGateway: 返回钱包余额
+APIGateway -> QRCodeService: 请求二维码生成
+QRCodeService -> Cloud: 请求二维码生成服务
+Cloud -> QRCodeService: 返回二维码
+QRCodeService -> APIGateway: 返回二维码
+APIGateway -> RankingService: 获取排名数据
+RankingService -> Postgres: 查询排名数据
+Postgres -> RankingService: 返回排名数据
+RankingService -> APIGateway: 返回排名信息
+APIGateway -> AdminService: 请求后台管理服务
+AdminService -> DataProcessingService: 请求数据源处理
+DataProcessingService -> MongoDB: 查询数据
+MongoDB -> DataProcessingService: 返回数据
+DataProcessingService -> AdminService: 返回数据处理结果
+AdminService -> APIGateway: 返回后台管理数据
+APIGateway -> RedDotService: 查询红点信息
+RedDotService -> Postgres: 查询红点状态
+Postgres -> RedDotService: 返回红点信息
+RedDotService -> APIGateway: 返回红点信息
+
+@enduml
