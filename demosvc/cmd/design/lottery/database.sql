@@ -751,6 +751,7 @@ COMMENT ON COLUMN lottery_type.multi_period_bet_min_amount IS '追期投注最�
 
 
 -- 创建收款支持方式表
+drop table if exists lottery_payment_channel;
 CREATE TABLE lottery_payment_channel (
                                          id SERIAL PRIMARY KEY,
                                          channel_code VARCHAR(50) NOT NULL UNIQUE, -- 支付通道唯一编码
@@ -856,3 +857,229 @@ INSERT INTO lottery_payment_channel (
           TRUE,   -- 银行卡充值
           ARRAY['ICBC', 'ABC', 'BOC', 'CCB', 'CMBC']  -- 支持的银行
       );
+-- 彩票方案表
+-- 创建彩票方案表
+drop table if exists lottery_scheme;
+CREATE TABLE lottery_scheme (
+                                id SERIAL PRIMARY KEY,
+                                scheme_code VARCHAR(100) NOT NULL UNIQUE, -- 方案唯一编码
+                                lottery_type_id INTEGER NOT NULL REFERENCES lottery_type(id), -- 关联彩种
+                                shop_id INTEGER REFERENCES lottery_shop(id), -- 关联店铺
+                                user_id bigint, -- 创建用户
+
+    -- 方案基本信息
+                                scheme_name VARCHAR(200), -- 方案名称
+                                scheme_type VARCHAR(50) NOT NULL CHECK (scheme_type IN (
+                                                                                        'standard', -- 标准方案
+                                                                                        'group_buy', -- 合买方案
+                                                                                        'chase_number', -- 追号方案
+                                                                                        'agent_buy' -- 代购方案
+                                    )),
+
+    -- 投注详情
+                                bet_numbers TEXT NOT NULL, -- 投注号码
+                                bet_count INTEGER NOT NULL, -- 注数
+                                multiple INTEGER NOT NULL DEFAULT 1, -- 倍数
+                                total_amount NUMERIC(12,2) NOT NULL, -- 总金额
+
+    -- 合买方案额外字段
+                                total_shares INTEGER DEFAULT 1, -- 总份数
+                                share_price NUMERIC(10,2) DEFAULT 0, -- 每份价格
+                                bought_shares INTEGER DEFAULT 0, -- 已购买份数
+                                initiator_shares INTEGER DEFAULT 0, -- 发起人认购份数
+
+    -- 追号配置
+                                chase_periods INTEGER[] DEFAULT ARRAY[]::INTEGER[], -- 追号期数
+                                total_chase_amount NUMERIC(12,2) DEFAULT 0, -- 总追号金额
+
+    -- 状态管理
+                                scheme_status VARCHAR(50) NOT NULL DEFAULT 'created' CHECK (scheme_status IN (
+                                                                                                              'created', -- 已创建
+                                                                                                              'paying', -- 支付中
+                                                                                                              'paid', -- 已支付
+                                                                                                              'cancelled', -- 已取消
+                                                                                                              'winning', -- 中奖
+                                                                                                              'settled' -- 已结算
+                                    )),
+
+    -- 开奖信息
+                                draw_period VARCHAR(50), -- 开奖期号
+                                is_win BOOLEAN DEFAULT FALSE, -- 是否中奖
+                                win_amount NUMERIC(12,2) DEFAULT 0, -- 中奖金额
+
+    -- 佣金和分成
+                                platform_commission NUMERIC(12,2) DEFAULT 0, -- 平台佣金
+                                agent_commission NUMERIC(12,2) DEFAULT 0, -- 代理佣金
+
+    -- 合买方案额外管理
+                                is_public BOOLEAN DEFAULT FALSE, -- 是否公开方案
+                                min_share_count INTEGER DEFAULT 0, -- 最小认购份数
+
+    -- 审计字段
+                                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 添加表注释
+COMMENT ON TABLE lottery_scheme IS '彩票方案表';
+
+-- 添加字段注释
+COMMENT ON COLUMN lottery_scheme.id IS '自增主键';
+COMMENT ON COLUMN lottery_scheme.scheme_code IS '方案唯一编码';
+COMMENT ON COLUMN lottery_scheme.lottery_type_id IS '彩种ID';
+COMMENT ON COLUMN lottery_scheme.shop_id IS '店铺ID';
+COMMENT ON COLUMN lottery_scheme.user_id IS '创建用户ID';
+COMMENT ON COLUMN lottery_scheme.scheme_name IS '方案名称';
+COMMENT ON COLUMN lottery_scheme.scheme_type IS '方案类型';
+COMMENT ON COLUMN lottery_scheme.bet_numbers IS '投注号码';
+COMMENT ON COLUMN lottery_scheme.bet_count IS '注数';
+COMMENT ON COLUMN lottery_scheme.multiple IS '倍数';
+COMMENT ON COLUMN lottery_scheme.total_amount IS '总金额';
+COMMENT ON COLUMN lottery_scheme.total_shares IS '总份数';
+COMMENT ON COLUMN lottery_scheme.share_price IS '每份价格';
+COMMENT ON COLUMN lottery_scheme.bought_shares IS '已购买份数';
+COMMENT ON COLUMN lottery_scheme.initiator_shares IS '发起人认购份数';
+COMMENT ON COLUMN lottery_scheme.chase_periods IS '追号期数';
+COMMENT ON COLUMN lottery_scheme.total_chase_amount IS '总追号金额';
+COMMENT ON COLUMN lottery_scheme.scheme_status IS '方案状态';
+COMMENT ON COLUMN lottery_scheme.draw_period IS '开奖期号';
+COMMENT ON COLUMN lottery_scheme.is_win IS '是否中奖';
+COMMENT ON COLUMN lottery_scheme.win_amount IS '中奖金额';
+COMMENT ON COLUMN lottery_scheme.platform_commission IS '平台佣金';
+COMMENT ON COLUMN lottery_scheme.agent_commission IS '代理佣金';
+COMMENT ON COLUMN lottery_scheme.is_public IS '是否公开方案';
+COMMENT ON COLUMN lottery_scheme.min_share_count IS '最小认购份数';
+
+-- 创建触发器自动更新修改时间
+CREATE OR REPLACE FUNCTION update_modified_column()
+    RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER update_lottery_scheme_modtime
+    BEFORE UPDATE ON lottery_scheme
+    FOR EACH ROW
+    EXECUTE FUNCTION update_modified_column();
+
+-- 创建索引
+CREATE INDEX idx_lottery_scheme_user_id ON lottery_scheme(user_id);
+CREATE INDEX idx_lottery_scheme_lottery_type ON lottery_scheme(lottery_type_id);
+CREATE INDEX idx_lottery_scheme_status ON lottery_scheme(scheme_status);
+CREATE INDEX idx_lottery_scheme_draw_period ON lottery_scheme(draw_period);
+
+-- 删除已存在的订单表
+DROP TABLE IF EXISTS lottery_order;
+
+-- 创建彩票订单表
+
+CREATE TABLE lottery_order (
+                               id SERIAL PRIMARY KEY,
+                               order_code VARCHAR(100) NOT NULL UNIQUE, -- 订单唯一编码
+                               scheme_id INTEGER REFERENCES lottery_scheme(id), -- 关联彩票方案
+
+    -- 订单基本信息
+                               lottery_type_id INTEGER NOT NULL REFERENCES lottery_type(id), -- 彩种
+                               shop_id INTEGER REFERENCES lottery_shop(id), -- 店铺
+                               user_id bigint, -- 下单用户
+
+    -- 订单详情
+                               order_type VARCHAR(50) NOT NULL CHECK (order_type IN (
+                                                                                     'single_order', -- 单一订单
+                                                                                     'group_order', -- 合买订单
+                                                                                     'agent_order' -- 代理订单
+                                   )),
+
+                               bet_numbers TEXT NOT NULL, -- 投注号码
+                               bet_count INTEGER NOT NULL, -- 注数
+                               order_multiple INTEGER NOT NULL DEFAULT 1, -- 倍数
+                               total_amount NUMERIC(12,2) NOT NULL, -- 订单总金额
+
+    -- 合买订单字段
+                               total_shares INTEGER DEFAULT 1, -- 总份数
+                               share_price NUMERIC(10,2) DEFAULT 0, -- 每份价格
+                               bought_shares INTEGER DEFAULT 0, -- 已购买份数
+                               buyer_shares INTEGER DEFAULT 0, -- 购买者认购份数
+
+    -- 订单状态
+                               order_status VARCHAR(50) NOT NULL DEFAULT 'created' CHECK (order_status IN (
+                                                                                                           'created', -- 已创建
+                                                                                                           'paying', -- 支付中
+                                                                                                           'paid', -- 已支付
+                                                                                                           'cancelled', -- 已取消
+                                                                                                           'settled' -- 已结算
+                                   )),
+
+    -- 支付信息
+                               payment_method VARCHAR(50), -- 支付方式
+                               payment_time TIMESTAMP WITH TIME ZONE, -- 支付时间
+
+    -- 开奖信息
+                               draw_period VARCHAR(50), -- 开奖期号
+                               is_win BOOLEAN DEFAULT FALSE, -- 是否中奖
+                               win_amount NUMERIC(12,2) DEFAULT 0, -- 中奖金额
+
+    -- 佣金信息
+                               platform_commission NUMERIC(12,2) DEFAULT 0, -- 平台佣金
+                               agent_commission NUMERIC(12,2) DEFAULT 0, -- 代理佣金
+
+    -- 其他管理字段
+                               is_public BOOLEAN DEFAULT FALSE, -- 是否公开订单
+                               min_share_count INTEGER DEFAULT 0, -- 最小认购份数
+
+    -- 审计字段
+                               created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                               updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 添加表注释
+COMMENT ON TABLE lottery_order IS '彩票订单表';
+
+-- 添加字段注释
+COMMENT ON COLUMN lottery_order.id IS '自增主键';
+COMMENT ON COLUMN lottery_order.order_code IS '订单唯一编码';
+COMMENT ON COLUMN lottery_order.scheme_id IS '关联彩票方案ID';
+COMMENT ON COLUMN lottery_order.lottery_type_id IS '彩种ID';
+COMMENT ON COLUMN lottery_order.shop_id IS '店铺ID';
+COMMENT ON COLUMN lottery_order.user_id IS '下单用户ID';
+COMMENT ON COLUMN lottery_order.order_type IS '订单类型';
+COMMENT ON COLUMN lottery_order.bet_numbers IS '投注号码';
+COMMENT ON COLUMN lottery_order.bet_count IS '注数';
+COMMENT ON COLUMN lottery_order.order_multiple IS '倍数';
+COMMENT ON COLUMN lottery_order.total_amount IS '订单总金额';
+COMMENT ON COLUMN lottery_order.total_shares IS '总份数';
+COMMENT ON COLUMN lottery_order.share_price IS '每份价格';
+COMMENT ON COLUMN lottery_order.bought_shares IS '已购买份数';
+COMMENT ON COLUMN lottery_order.buyer_shares IS '购买者认购份数';
+COMMENT ON COLUMN lottery_order.order_status IS '订单状态';
+COMMENT ON COLUMN lottery_order.payment_method IS '支付方式';
+COMMENT ON COLUMN lottery_order.payment_time IS '支付时间';
+COMMENT ON COLUMN lottery_order.draw_period IS '开奖期号';
+COMMENT ON COLUMN lottery_order.is_win IS '是否中奖';
+COMMENT ON COLUMN lottery_order.win_amount IS '中奖金额';
+COMMENT ON COLUMN lottery_order.platform_commission IS '平台佣金';
+COMMENT ON COLUMN lottery_order.agent_commission IS '代理佣金';
+COMMENT ON COLUMN lottery_order.is_public IS '是否公开订单';
+COMMENT ON COLUMN lottery_order.min_share_count IS '最小认购份数';
+
+-- 创建触发器自动更新修改时间
+CREATE OR REPLACE FUNCTION update_modified_column()
+    RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER update_lottery_order_modtime
+    BEFORE UPDATE ON lottery_order
+    FOR EACH ROW
+    EXECUTE FUNCTION update_modified_column();
+
+-- 创建索引
+CREATE INDEX idx_lottery_order_user_id ON lottery_order(user_id);
+CREATE INDEX idx_lottery_order_lottery_type ON lottery_order(lottery_type_id);
+CREATE INDEX idx_lottery_order_status ON lottery_order(order_status);
+CREATE INDEX idx_lottery_order_draw_period ON lottery_order(draw_period);
