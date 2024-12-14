@@ -469,6 +469,17 @@ CREATE TABLE lottery_shop (
                               city VARCHAR(50),
                               district VARCHAR(50),
                               detailed_address TEXT,
+    -- 新增属性
+                              shop_notice TEXT, -- 店铺公告
+                              shop_phone VARCHAR(20), -- 店铺电话
+                              shop_wechat VARCHAR(100), -- 店铺微信
+                              lottery_types VARCHAR(255)[], -- 店铺彩种类型（数组类型）
+                              allow_new_user_registration BOOLEAN DEFAULT FALSE, -- 是否允许新用户注册
+                              balance_transfer_enabled BOOLEAN DEFAULT FALSE, -- 余额支持开关
+                              auto_dispatch_order BOOLEAN DEFAULT FALSE, -- 自动派单
+                              auto_accept_order BOOLEAN DEFAULT FALSE, -- 自动接单
+                              auto_accept_and_print_ticket BOOLEAN DEFAULT FALSE, -- 自动接单并出票
+                              small_amount_passwordless_transfer NUMERIC(10,2) DEFAULT 0.00, -- 小额免密额度
                               shop_type VARCHAR(30) NOT NULL CHECK (shop_type IN ('physical', 'online', 'hybrid')),
                               business_license_number VARCHAR(50) UNIQUE,
                               business_license_image VARCHAR(255),
@@ -514,7 +525,16 @@ COMMENT ON COLUMN lottery_shop.registration_time IS '注册时间';
 COMMENT ON COLUMN lottery_shop.last_active_time IS '最后活跃时间';
 COMMENT ON COLUMN lottery_shop.created_at IS '创建时间';
 COMMENT ON COLUMN lottery_shop.updated_at IS '最后修改时间';
-
+COMMENT ON COLUMN lottery_shop.shop_notice IS '店铺公告';
+COMMENT ON COLUMN lottery_shop.shop_phone IS '店铺联系电话';
+COMMENT ON COLUMN lottery_shop.shop_wechat IS '店铺微信号';
+COMMENT ON COLUMN lottery_shop.lottery_types IS '店铺支持的彩种类型数组';
+COMMENT ON COLUMN lottery_shop.allow_new_user_registration IS '是否允许新用户注册';
+COMMENT ON COLUMN lottery_shop.balance_transfer_enabled IS '余额支持开关';
+COMMENT ON COLUMN lottery_shop.auto_dispatch_order IS '是否自动派单';
+COMMENT ON COLUMN lottery_shop.auto_accept_order IS '是否自动接单';
+COMMENT ON COLUMN lottery_shop.auto_accept_and_print_ticket IS '是否自动接单并出票';
+COMMENT ON COLUMN lottery_shop.small_amount_passwordless_transfer IS '小额免密转账额度';
 -- 创建触发器自动更新修改时间
 CREATE OR REPLACE FUNCTION update_modified_column()
     RETURNS TRIGGER AS $$
@@ -655,3 +675,184 @@ COMMENT ON COLUMN application.application_status IS '申请状态（待处理、
 COMMENT ON COLUMN application.application_date IS '申请时间';
 COMMENT ON COLUMN application.process_date IS '处理时间';
 COMMENT ON COLUMN application.processed_by IS '处理人员ID（可以是管理员ID）';
+
+
+-- 创建彩种管理表
+drop table if exists lottery_type;
+CREATE TABLE lottery_type (
+                              id SERIAL PRIMARY KEY,
+                              lottery_code VARCHAR(50) NOT NULL UNIQUE, -- 彩种唯一编码
+                              lottery_name VARCHAR(100) NOT NULL, -- 彩种名称
+                              lottery_category VARCHAR(50) NOT NULL, -- 彩种分类（如：福利彩票、体育彩票）
+                              lottery_type VARCHAR(50) NOT NULL, -- 玩法类型（如：数字型、乐透型、即开型）
+
+    -- 彩种基本配置
+                              min_bet_amount NUMERIC(10,2) DEFAULT 2.00, -- 最低投注金额
+                              max_bet_amount NUMERIC(10,2) DEFAULT 10000.00, -- 最高投注金额
+                              prize_pool_percentage NUMERIC(5,2) DEFAULT 50.00, -- 奖池分配百分比
+
+    -- 开奖相关
+                              draw_frequency VARCHAR(50), -- 开奖频率（如：每周三、每周六）
+                              draw_time TIME, -- 开奖时间
+                              draw_days INTEGER[], -- 开奖日期（如：[3,6]表示周三和周六）
+
+    -- 新增属性
+                              allow_group_buy BOOLEAN DEFAULT FALSE, -- 合买开关
+                              user_bet_cutoff_advance_minutes INTEGER DEFAULT 5, -- 用户投注截止时间提前分钟数
+                              user_min_bet_amount NUMERIC(10,2) DEFAULT 1.00, -- 用户投注最低金额
+                              multi_period_bet_min_amount NUMERIC(10,2) DEFAULT 10.00, -- 追期投注最低金额
+
+    -- 状态控制
+                              is_active BOOLEAN DEFAULT TRUE, -- 是否启用
+                              is_visible BOOLEAN DEFAULT TRUE, -- 是否对用户可见
+                              is_sellable BOOLEAN DEFAULT TRUE, -- 是否可销售
+
+    -- 佣金和分成
+                              sales_commission_rate NUMERIC(5,2) DEFAULT 0, -- 销售佣金比例
+                              agent_commission_rate NUMERIC(5,2) DEFAULT 0, -- 代理商佣金比例
+
+    -- 系统配置
+                              prize_calculation_rule JSONB, -- 奖金计算规则
+                              bet_rules JSONB, -- 投注规则
+
+    -- 审计字段
+                              created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                              updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+-- 添加表注释
+COMMENT ON TABLE lottery_type IS '彩种管理表';
+
+-- 添加字段注释
+COMMENT ON COLUMN lottery_type.id IS '自增主键';
+COMMENT ON COLUMN lottery_type.lottery_code IS '彩种唯一编码';
+COMMENT ON COLUMN lottery_type.lottery_name IS '彩种名称';
+COMMENT ON COLUMN lottery_type.lottery_category IS '彩种分类';
+COMMENT ON COLUMN lottery_type.lottery_type IS '玩法类型';
+COMMENT ON COLUMN lottery_type.min_bet_amount IS '最低投注金额';
+COMMENT ON COLUMN lottery_type.max_bet_amount IS '最高投注金额';
+COMMENT ON COLUMN lottery_type.prize_pool_percentage IS '奖池分配百分比';
+COMMENT ON COLUMN lottery_type.draw_frequency IS '开奖频率';
+COMMENT ON COLUMN lottery_type.draw_time IS '开奖时间';
+COMMENT ON COLUMN lottery_type.draw_days IS '开奖日期';
+COMMENT ON COLUMN lottery_type.is_active IS '是否启用';
+COMMENT ON COLUMN lottery_type.is_visible IS '是否对用户可见';
+COMMENT ON COLUMN lottery_type.is_sellable IS '是否可销售';
+COMMENT ON COLUMN lottery_type.sales_commission_rate IS '销售佣金比例';
+COMMENT ON COLUMN lottery_type.agent_commission_rate IS '代理商佣金比例';
+COMMENT ON COLUMN lottery_type.prize_calculation_rule IS '奖金计算规则';
+COMMENT ON COLUMN lottery_type.bet_rules IS '投注规则';
+
+-- 添加新字段注释
+COMMENT ON COLUMN lottery_type.allow_group_buy IS '是否允许合买';
+COMMENT ON COLUMN lottery_type.user_bet_cutoff_advance_minutes IS '用户投注截止时间提前分钟数';
+COMMENT ON COLUMN lottery_type.user_min_bet_amount IS '用户投注最低金额';
+COMMENT ON COLUMN lottery_type.multi_period_bet_min_amount IS '追期投注最低金额';
+
+
+
+-- 创建收款支持方式表
+CREATE TABLE lottery_payment_channel (
+                                         id SERIAL PRIMARY KEY,
+                                         channel_code VARCHAR(50) NOT NULL UNIQUE, -- 支付通道唯一编码
+                                         channel_name VARCHAR(100) NOT NULL, -- 支付通道名称
+                                         channel_type VARCHAR(50) NOT NULL, -- 支付类型（在线支付/银行卡/其他）
+
+    -- 在线支付方式
+                                         is_alipay_supported BOOLEAN DEFAULT FALSE, -- 是否支持支付宝
+                                         is_wechat_pay_supported BOOLEAN DEFAULT FALSE, -- 是否支持微信支付
+                                         is_quick_payment_supported BOOLEAN DEFAULT FALSE, -- 是否支持快捷支付
+                                         is_qr_code_payment_supported BOOLEAN DEFAULT FALSE, -- 是否支持二维码收款
+
+    -- 银行卡充值
+                                         is_bank_card_recharge_supported BOOLEAN DEFAULT FALSE, -- 是否支持银行卡充值
+                                         supported_banks TEXT[], -- 支持的银行列表
+
+    -- 配置信息
+                                         min_recharge_amount NUMERIC(10,2) DEFAULT 0.00, -- 最低充值金额
+                                         max_recharge_amount NUMERIC(10,2) DEFAULT 1000000.00, -- 最高充值金额
+                                         recharge_fee_rate NUMERIC(5,2) DEFAULT 0, -- 充值手续费率
+                                         daily_recharge_limit NUMERIC(12,2), -- 每日充值限额
+
+    -- 状态控制
+                                         is_active BOOLEAN DEFAULT TRUE, -- 是否启用
+                                         is_visible BOOLEAN DEFAULT TRUE, -- 是否对用户可见
+
+    -- 审计字段
+                                         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                                         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 添加表注释
+COMMENT ON TABLE lottery_payment_channel IS '彩票系统支付通道配置表';
+
+-- 添加字段注释
+COMMENT ON COLUMN lottery_payment_channel.id IS '自增主键';
+COMMENT ON COLUMN lottery_payment_channel.channel_code IS '支付通道唯一编码';
+COMMENT ON COLUMN lottery_payment_channel.channel_name IS '支付通道名称';
+COMMENT ON COLUMN lottery_payment_channel.channel_type IS '支付类型';
+COMMENT ON COLUMN lottery_payment_channel.is_alipay_supported IS '是否支持支付宝支付';
+COMMENT ON COLUMN lottery_payment_channel.is_wechat_pay_supported IS '是否支持微信支付';
+COMMENT ON COLUMN lottery_payment_channel.is_quick_payment_supported IS '是否支持快捷支付';
+COMMENT ON COLUMN lottery_payment_channel.is_qr_code_payment_supported IS '是否支持二维码收款';
+COMMENT ON COLUMN lottery_payment_channel.is_bank_card_recharge_supported IS '是否支持银行卡充值';
+COMMENT ON COLUMN lottery_payment_channel.supported_banks IS '支持的银行列表';
+COMMENT ON COLUMN lottery_payment_channel.min_recharge_amount IS '最低充值金额';
+COMMENT ON COLUMN lottery_payment_channel.max_recharge_amount IS '最高充值金额';
+COMMENT ON COLUMN lottery_payment_channel.recharge_fee_rate IS '充值手续费率';
+COMMENT ON COLUMN lottery_payment_channel.daily_recharge_limit IS '每日充值限额';
+COMMENT ON COLUMN lottery_payment_channel.is_active IS '是否启用';
+COMMENT ON COLUMN lottery_payment_channel.is_visible IS '是否对用户可见';
+
+-- 创建触发器自动更新修改时间
+CREATE OR REPLACE FUNCTION update_modified_column()
+    RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER update_lottery_payment_channel_modtime
+    BEFORE UPDATE ON lottery_payment_channel
+    FOR EACH ROW
+    EXECUTE FUNCTION update_modified_column();
+
+-- 创建索引
+CREATE INDEX idx_lottery_payment_channel_code ON lottery_payment_channel(channel_code);
+CREATE INDEX idx_lottery_payment_channel_type ON lottery_payment_channel(channel_type);
+CREATE INDEX idx_lottery_payment_channel_active ON lottery_payment_channel(is_active);
+
+-- 插入一些初始数据示例
+INSERT INTO lottery_payment_channel (
+    channel_code,
+    channel_name,
+    channel_type,
+    is_alipay_supported,
+    is_wechat_pay_supported,
+    is_quick_payment_supported,
+    is_qr_code_payment_supported,
+    is_bank_card_recharge_supported,
+    supported_banks
+) VALUES
+      (
+          'ONLINE_PAYMENT_01',
+          '主要在线支付通道',
+          '在线支付',
+          TRUE,   -- 支付宝
+          TRUE,   -- 微信支付
+          TRUE,   -- 快捷支付
+          TRUE,   -- 二维码收款
+          FALSE,  -- 银行卡充值
+          NULL    -- 银行列表
+      ),
+      (
+          'BANK_RECHARGE_01',
+          '银行卡充值通道',
+          '银行卡',
+          FALSE,  -- 支付宝
+          FALSE,  -- 微信支付
+          FALSE,  -- 快捷支付
+          FALSE,  -- 二维码收款
+          TRUE,   -- 银行卡充值
+          ARRAY['ICBC', 'ABC', 'BOC', 'CCB', 'CMBC']  -- 支持的银行
+      );
