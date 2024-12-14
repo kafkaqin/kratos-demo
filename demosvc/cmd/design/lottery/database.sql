@@ -863,8 +863,8 @@ drop table if exists lottery_scheme;
 CREATE TABLE lottery_scheme (
                                 id SERIAL PRIMARY KEY,
                                 scheme_code VARCHAR(100) NOT NULL UNIQUE, -- 方案唯一编码
-                                lottery_type_id INTEGER NOT NULL REFERENCES lottery_type(id), -- 关联彩种
-                                shop_id INTEGER REFERENCES lottery_shop(id), -- 关联店铺
+                                lottery_type_id INTEGER , -- 关联彩种
+                                shop_id INTEGER , -- 关联店铺
                                 user_id bigint, -- 创建用户
 
     -- 方案基本信息
@@ -978,11 +978,11 @@ DROP TABLE IF EXISTS lottery_order;
 CREATE TABLE lottery_order (
                                id SERIAL PRIMARY KEY,
                                order_code VARCHAR(100) NOT NULL UNIQUE, -- 订单唯一编码
-                               scheme_id INTEGER REFERENCES lottery_scheme(id), -- 关联彩票方案
+                               scheme_id INTEGER , -- 关联彩票方案
 
     -- 订单基本信息
-                               lottery_type_id INTEGER NOT NULL REFERENCES lottery_type(id), -- 彩种
-                               shop_id INTEGER REFERENCES lottery_shop(id), -- 店铺
+                               lottery_type_id INTEGER, -- 彩种
+                               shop_id INTEGER , -- 店铺
                                user_id bigint, -- 下单用户
 
     -- 订单详情
@@ -1083,3 +1083,126 @@ CREATE INDEX idx_lottery_order_user_id ON lottery_order(user_id);
 CREATE INDEX idx_lottery_order_lottery_type ON lottery_order(lottery_type_id);
 CREATE INDEX idx_lottery_order_status ON lottery_order(order_status);
 CREATE INDEX idx_lottery_order_draw_period ON lottery_order(draw_period);
+
+
+-- 删除已存在的投注记录表
+DROP TABLE IF EXISTS lottery_bet_record;
+
+-- 创建彩票投注记录表
+CREATE TABLE lottery_bet_record (
+                                    id SERIAL PRIMARY KEY,
+                                    bet_record_code VARCHAR(100) NOT NULL UNIQUE, -- 投注记录唯一编码
+                                    order_id INTEGER , -- 关联订单
+                                    scheme_id INTEGER , -- 关联方案
+
+    -- 基本投注信息
+                                    lottery_type_id INTEGER NOT NULL, -- 彩种
+                                    user_id INTEGER  , -- 投注用户
+                                    shop_id INTEGER , -- 投注店铺
+
+    -- 投注详情
+                                    bet_type VARCHAR(50) NOT NULL CHECK (bet_type IN (
+                                                                                      'single', -- 单式
+                                                                                      'multiple', -- 复式
+                                                                                      'group', -- 组选
+                                                                                      'package', -- 包号
+                                                                                      'combination' -- 机选
+                                        )),
+                                    bet_method VARCHAR(50) NOT NULL CHECK (bet_method IN (
+                                                                                          'normal', -- 普通投注
+                                                                                          'chase', -- 追号
+                                                                                          'joint' -- 合买
+                                        )),
+
+    -- 具体投注号码
+                                    bet_numbers TEXT NOT NULL, -- 投注号码
+                                    bet_numbers_type VARCHAR(50), -- 号码类型（如大小单双）
+
+    -- 投注计算
+                                    bet_count INTEGER NOT NULL, -- 注数
+                                    bet_multiple INTEGER NOT NULL DEFAULT 1, -- 倍数
+                                    single_bet_amount NUMERIC(10,2) NOT NULL, -- 单注金额
+                                    total_bet_amount NUMERIC(12,2) NOT NULL, -- 总投注金额
+
+    -- 开奖信息
+                                    draw_period VARCHAR(50), -- 开奖期号
+                                    draw_time TIMESTAMP WITH TIME ZONE, -- 开奖时间
+                                    is_win BOOLEAN DEFAULT FALSE, -- 是否中奖
+                                    win_amount NUMERIC(12,2) DEFAULT 0, -- 中奖金额
+                                    win_level VARCHAR(50), -- 中奖等级
+
+    -- 状态管理
+                                    bet_status VARCHAR(50) NOT NULL DEFAULT 'created' CHECK (bet_status IN (
+                                                                                                            'created', -- 已创建
+                                                                                                            'confirmed', -- 已确认
+                                                                                                            'canceled', -- 已取消
+                                                                                                            'waiting_draw', -- 等待开奖
+                                                                                                            'drawn', -- 已开奖
+                                                                                                            'settled' -- 已结算
+                                        )),
+
+    -- 追号相关
+                                    is_chase_bet BOOLEAN DEFAULT FALSE, -- 是否追号
+                                    chase_total_periods INTEGER DEFAULT 1, -- 追号总期数
+                                    current_chase_period INTEGER DEFAULT 1, -- 当前追号期数
+
+    -- 佣金信息
+                                    platform_commission NUMERIC(10,2) DEFAULT 0, -- 平台佣金
+                                    agent_commission NUMERIC(10,2) DEFAULT 0, -- 代理佣金
+
+    -- 审计字段
+                                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 添加表注释
+COMMENT ON TABLE lottery_bet_record IS '彩票投注记录表';
+
+-- 添加字段注释
+COMMENT ON COLUMN lottery_bet_record.id IS '自增主键';
+COMMENT ON COLUMN lottery_bet_record.bet_record_code IS '投注记录唯一编码';
+COMMENT ON COLUMN lottery_bet_record.order_id IS '关联订单ID';
+COMMENT ON COLUMN lottery_bet_record.scheme_id IS '关联方案ID';
+COMMENT ON COLUMN lottery_bet_record.lottery_type_id IS '彩种ID';
+COMMENT ON COLUMN lottery_bet_record.user_id IS '投注用户ID';
+COMMENT ON COLUMN lottery_bet_record.shop_id IS '投注店铺ID';
+COMMENT ON COLUMN lottery_bet_record.bet_type IS '投注类型';
+COMMENT ON COLUMN lottery_bet_record.bet_method IS '投注方式';
+COMMENT ON COLUMN lottery_bet_record.bet_numbers IS '投注号码';
+COMMENT ON COLUMN lottery_bet_record.bet_numbers_type IS '号码类型';
+COMMENT ON COLUMN lottery_bet_record.bet_count IS '注数';
+COMMENT ON COLUMN lottery_bet_record.bet_multiple IS '倍数';
+COMMENT ON COLUMN lottery_bet_record.single_bet_amount IS '单注金额';
+COMMENT ON COLUMN lottery_bet_record.total_bet_amount IS '总投注金额';
+COMMENT ON COLUMN lottery_bet_record.draw_period IS '开奖期号';
+COMMENT ON COLUMN lottery_bet_record.draw_time IS '开奖时间';
+COMMENT ON COLUMN lottery_bet_record.is_win IS '是否中奖';
+COMMENT ON COLUMN lottery_bet_record.win_amount IS '中奖金额';
+COMMENT ON COLUMN lottery_bet_record.win_level IS '中奖等级';
+COMMENT ON COLUMN lottery_bet_record.bet_status IS '投注状态';
+COMMENT ON COLUMN lottery_bet_record.is_chase_bet IS '是否追号';
+COMMENT ON COLUMN lottery_bet_record.chase_total_periods IS '追号总期数';
+COMMENT ON COLUMN lottery_bet_record.current_chase_period IS '当前追号期数';
+COMMENT ON COLUMN lottery_bet_record.platform_commission IS '平台佣金';
+COMMENT ON COLUMN lottery_bet_record.agent_commission IS '代理佣金';
+
+-- 创建触发器自动更新修改时间
+CREATE OR REPLACE FUNCTION update_modified_column()
+    RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER update_lottery_bet_record_modtime
+    BEFORE UPDATE ON lottery_bet_record
+    FOR EACH ROW
+    EXECUTE FUNCTION update_modified_column();
+
+-- 创建索引
+CREATE INDEX idx_lottery_bet_record_user_id ON lottery_bet_record(user_id);
+CREATE INDEX idx_lottery_bet_record_order_id ON lottery_bet_record(order_id);
+CREATE INDEX idx_lottery_bet_record_lottery_type ON lottery_bet_record(lottery_type_id);
+CREATE INDEX idx_lottery_bet_record_draw_period ON lottery_bet_record(draw_period);
+CREATE INDEX idx_lottery_bet_record_status ON lottery_bet_record(bet_status);
