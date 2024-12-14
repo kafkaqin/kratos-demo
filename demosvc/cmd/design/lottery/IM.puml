@@ -1,0 +1,44 @@
+@startuml
+' Set layout direction
+top to bottom direction
+
+' Actor definition
+actor User as "End User"
+
+' Application/Web layer node
+node "APP or Web Frontend" as APP_OR_Web {
+    label "User Interface"
+}
+
+' API Gateway layer with Authentication and Authorization
+node "API Gateway" as API_Gateway {
+    label "Gateway & Security"
+    node Authentication as "Authentication"
+    node Authorization as "Authorization"
+}
+
+' Service layer
+node "Application Services" as Service {
+    label "Core Business Logic"
+}
+
+' Databases layer
+database "Redis Cache" as redis {
+    label "Data Storage (Cache)"
+}
+database "PostgreSQL Database" as postgres {
+    label "Relational Database"
+}
+database "MongoDB Database" as mongodb {
+    label "NoSQL Database"
+}
+
+' Relationships with arrows and labels
+User --> APP_OR_Web : "Access via Web/App"
+APP_OR_Web --> API_Gateway : "Request API"
+API_Gateway --> Service : "Forward Request"
+Service --> redis : "Cache Query"
+Service --> postgres : "Data Query"
+Service --> mongodb : "Document Store Query"
+
+@enduml

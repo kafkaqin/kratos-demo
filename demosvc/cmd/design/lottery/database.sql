@@ -14,7 +14,14 @@
 
 -- 数据源使用mongodb存储
 
+-- CREATE DATABASE mydatabase
+--     TEMPLATE = template0
+--     ENCODING = 'UTF8'
+--     LC_COLLATE = 'en_US.UTF-8'
+--     LC_CTYPE = 'en_US.UTF-8';
 
+-- postgresql://username:password@hostname:port/database?options=-c%20timezone%3DUTC&client_encoding=UTF8
+--
 -- 推送 红点表
 drop table  if exists user_red_dot;
 CREATE TABLE user_red_dot (
