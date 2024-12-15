@@ -137,5 +137,18 @@ CREATE TABLE service_assignments (
 -- group_id
 --
 -- 热点消息使用list
---
+-- IM进入聊天弹窗
 -- unread_private_message_id user123 recoiver_id 3
+
+
+-- 1.合作店铺 派单店铺 出票店铺的区别？
+-- 2.员工可以推荐人吗
+-- 3.支持邮箱登录吗
+-- 4.敏感词过滤
+--   个人聊天
+--    群聊
+--    客服
+-- 直播聊天弹窗
+-- 未读消息
+-- IM中客服分配功能
+-- 直播二维码
