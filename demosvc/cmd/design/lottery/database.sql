@@ -24,15 +24,15 @@
 --
 -- 推送 红点表
 drop table  if exists user_red_dot;
-CREATE TABLE user_red_dot (
-                              user_id INT NOT NULL,
-                              red_dot_type VARCHAR(255) NOT NULL,
-                              status BOOLEAN DEFAULT FALSE,  -- TRUE为已查看，FALSE为未查看
-                              last_updated_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                              PRIMARY KEY (user_id, red_dot_type)
-);
+CREATE TABLE if not EXISTS user_red_dot (
+                                            user_id INT NOT NULL,
+                                            red_dot_type VARCHAR(255) NOT NULL,
+    status BOOLEAN DEFAULT FALSE,  -- TRUE为已查看，FALSE为未查看
+    last_updated_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, red_dot_type)
+    );
 
-
+CREATE TYPE status AS ENUM ('active', 'inactive', 'pending');
 
 -- 推荐关系表
 -- 推荐code生成规则: AES加密 然后加随机字符串 ,随机字符串需要存储在数据库中(mongodb中也行)
@@ -1213,3 +1213,85 @@ CREATE INDEX idx_lottery_bet_record_order_id ON lottery_bet_record(order_id);
 CREATE INDEX idx_lottery_bet_record_lottery_type ON lottery_bet_record(lottery_type_id);
 CREATE INDEX idx_lottery_bet_record_draw_period ON lottery_bet_record(draw_period);
 CREATE INDEX idx_lottery_bet_record_status ON lottery_bet_record(bet_status);
+--  横幅
+drop table if EXISTS banners;
+CREATE TABLE banners (
+                         id SERIAL PRIMARY KEY,
+                         title VARCHAR(255),
+                         image_url TEXT,
+                         link_url TEXT,
+                         start_time TIMESTAMP,
+                         end_time TIMESTAMP,
+                         status BOOLEAN DEFAULT TRUE
+);
+-- 插屏弹框
+CREATE TABLE popups (
+                        id SERIAL PRIMARY KEY,
+                        content TEXT,
+                        start_time TIMESTAMP,
+                        end_time TIMESTAMP,
+                        status BOOLEAN DEFAULT TRUE
+);
+-- 广播
+CREATE TABLE broadcasts (
+                            id SERIAL PRIMARY KEY,
+                            message TEXT,
+                            created_at TIMESTAMP DEFAULT NOW()
+);
+-- 投注
+CREATE TABLE bet_options (
+                             id SERIAL PRIMARY KEY,
+                             type VARCHAR(50),
+                             match_id BIGINT,
+                             odds DECIMAL(10, 2),
+                             status BOOLEAN DEFAULT TRUE
+);
+-- 跟单
+CREATE TABLE follow_orders (
+                               id SERIAL PRIMARY KEY,
+                               user_id BIGINT,
+                               match_id BIGINT,
+                               bet_amount DECIMAL(10, 2),
+                               potential_win DECIMAL(10, 2),
+                               created_at TIMESTAMP DEFAULT NOW()
+);
+-- 钱包相关
+CREATE TABLE transactions (
+                              id SERIAL PRIMARY KEY,
+                              wallet_id BIGINT REFERENCES wallets(id),
+                              type VARCHAR(50), -- deposit, withdrawal, transfer
+                              amount DECIMAL(10, 2),
+                              created_at TIMESTAMP DEFAULT NOW()
+);
+-- 排名表
+CREATE TABLE rankings (
+                          id SERIAL PRIMARY KEY,
+                          type VARCHAR(50), -- 投注、中奖、推广
+                          user_id BIGINT REFERENCES users(id),
+                          rank INT,
+                          score DECIMAL(10, 2),
+                          created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE lottery_results (
+                                 id SERIAL PRIMARY KEY,
+                                 lottery_type VARCHAR(50) NOT NULL,   -- 彩票类型，如 "大乐透", "双色球"
+                                 draw_date DATE NOT NULL,             -- 开奖日期
+                                 source VARCHAR(100) NOT NULL,        -- 数据来源
+                                 result JSONB NOT NULL,               -- 彩票结果，JSON 格式存储
+                                 received_at TIMESTAMP DEFAULT NOW(), -- 数据接收时间
+                                 UNIQUE (lottery_type, draw_date, source)
+);
+CREATE TABLE final_lottery_results (
+                                       id SERIAL PRIMARY KEY,
+                                       lottery_type VARCHAR(50) NOT NULL,
+                                       draw_date DATE NOT NULL,
+                                       result JSONB NOT NULL,                -- 最终彩票结果
+                                       verified_sources JSONB NOT NULL,     -- 参与验证的数据来源
+                                       conflicts JSONB,                     -- 冲突来源记录
+                                       finalized_at TIMESTAMP DEFAULT NOW()
+);
+-- 数据源 → 数据收集模块 (存入 lottery_results 表) → 数据对比与验证模块 → 冲突处理 (人工干预) →
+-- 结果确认 (存入 final_lottery_results 表) → 前端展示模块
+-- 自动追号：设置连续购买的期数。
+-- 停追条件：如中奖停止追号。
