@@ -152,3 +152,6 @@ CREATE TABLE service_assignments (
 -- 未读消息
 -- IM中客服分配功能
 -- 直播二维码
+
+-- 推荐帮行榜
+-- 彩票出错时人工干预系统
