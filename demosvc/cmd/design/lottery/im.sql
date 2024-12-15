@@ -156,3 +156,5 @@ CREATE TABLE service_assignments (
 -- 推荐帮行榜
 -- 彩票出错时人工干预系统
 -- https://gorm.io/zh_CN/docs/sharding.html
+https://github.com/stathat/consistent
+https://juejin.cn/post/7223584687100067877
