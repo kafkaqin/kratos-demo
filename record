@@ -66,4 +66,15 @@ https://github.com/go-kit/kit/blob/master/auth/casbin/middleware_test.go
 Access Token: 用于授权访问后端 API。
 ID Token: 用于验证用户身份，通常是一个 JWT (JSON Web Token)。
 https://plantuml.com/zh/mindmap-diagram
+
+https://github.com/openimsdk/open-im-server/blob/main/README_zh_CN.md
+
 https://www.bookstack.cn/read/zadigx-1.7.0-zh/819e1f5343992340.md?wd=Mock#%E6%AD%A5%E9%AA%A4%201%20%EF%BC%9A%E7%BC%96%E5%86%99%E8%87%AA%E5%AE%9A%E4%B9%89%20Dex%20Connector
+
+
+https://github.com/dtm-labs/dtm
+
+https://github.com/AlexStocks/getty
+https://github.com/apache/incubator-seata-go
+
+ polarismesh/polaris
